@@ -1,6 +1,6 @@
 # Sistema Local de Reservas de Equipos de Laboratorio
 
-## 1. Especificación breve — Versión 1.0 Inicial
+## 1. Especificación breve — Versión 1.1
 
 ### 1.1 Problema y Alcance
 
@@ -74,7 +74,41 @@ reserva y de consulta de disponibilidad:
 
 ---
 
-### 1.4 Criterios de Aceptación Verificables
+### 1.4 Supuestos y Decisiones Técnicas
+
+Esta subsección se agrega en la v1.1 para fijar tres decisiones técnicas que
+afectan directamente la implementación y las pruebas automáticas.
+
+#### Formato de fechas
+
+Los campos `inicio` y `fin` de una reserva se representan en **ISO 8601**
+(`YYYY-MM-DDTHH:MM`), asumiendo la **hora local del laboratorio (UTC-3)**.
+No se realiza ninguna conversión de husos horarios: el sistema almacena y
+compara las cadenas tal como las recibe.
+
+**Ejemplo válido:** `"2025-06-15T10:00"` y `"2025-06-15T11:30"`.
+
+#### Fechas pasadas y límites de duración
+
+- **Se aceptan cualesquiera fechas válidas** (incluyendo fechas en el pasado)
+  siempre que se cumpla `inicio < fin`. No se restringe respecto al reloj actual
+  del sistema. Esta decisión garantiza que las pruebas automáticas sean
+  **100 % reproducibles y deterministas** en el futuro, sin depender de `datetime.now()`.
+- **Duración mínima:** 1 minuto (consecuencia directa de `inicio < fin` con
+  granularidad de 1 minuto).
+- **Sin límite máximo de anticipación:** se puede reservar con cualquier
+  antelación futura.
+
+#### Manejo de errores
+
+El servicio eleva excepciones de Python (`ValueError`) con mensajes descriptivos.
+La capa de API (FastAPI) las traduce a respuestas HTTP con código de estado
+apropiado (`422 Unprocessable Entity` para errores de validación de dominio,
+`404 Not Found` para recursos inexistentes).
+
+---
+
+### 1.5 Criterios de Aceptación Verificables
 
 Cada regla de negocio se traduce en uno o más casos de prueba automáticos en
 `tests/test_reservas.py`. El sistema se considera correcto cuando **todos** los

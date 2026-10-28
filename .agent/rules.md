@@ -77,3 +77,4 @@ WHERE id = :id AND estado = 'ACTIVA';
 
 **Está explícitamente prohibido** emitir `DELETE FROM reservas` para implementar
 cancelaciones bajo ninguna circunstancia.
+
