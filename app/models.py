@@ -160,3 +160,4 @@ class DisponibilidadConsulta(BaseModel):
         return self
 
     model_config = {"from_attributes": True}
+

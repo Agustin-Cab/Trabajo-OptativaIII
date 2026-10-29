@@ -32,9 +32,44 @@
 
 | Fase | Descripción |
 |------|-------------|
-| Fase 2 | Implementación de `app/main.py` (FastAPI) y `scripts/reset_db.py` |
 | Fase 3 | Implementación de `tests/test_reservas.py` con casos de prueba |
 | Fase 4 | Integración final y validación completa |
+
+---
+
+## Episodio de Delegación 2 — API REST (`app/main.py`) y script de reinicio (`scripts/reset_db.py`)
+
+**Estado:** ✅ Completado  
+**Fecha:** 2026-10-28
+
+### Tareas realizadas
+
+1. **`app/main.py`** — API REST con FastAPI, 5 endpoints:
+
+   | Método | Ruta | Descripción |
+   |--------|------|-------------|
+   | `GET` | `/unidades` | Lista las 5 unidades del inventario |
+   | `GET` | `/disponibilidad` | Consulta disponibilidad por query params (`unidad_id`, `inicio`, `fin`) |
+   | `POST` | `/reservas` | Crea una reserva activa (HTTP 201); rechaza con 404/409/422 según el error |
+   | `GET` | `/reservas` | Lista todas las reservas (activas + canceladas); filtros opcionales `unidad_id` y `solo_activas` |
+   | `POST` | `/reservas/{id}/cancelar` | Soft-delete: `UPDATE estado = 'CANCELADA'` (Adaptación 2), nunca DELETE |
+
+2. **`scripts/reset_db.py`** — Script de reinicio destructivo con salvaguardas:
+   - Solicita confirmación interactiva escribiendo `SI` exacto antes de proceder.
+   - Flag `--sin-confirmacion` para uso en scripts CI/tests automatizados.
+   - Flag `--db-path` para apuntar a una BD alternativa.
+   - Imprime advertencia explícita antes y resumen detallado después del reinicio.
+   - Secuencia: `DROP TABLE reservas` → `DROP TABLE unidades` → `CREATE TABLE` × 2 → `INSERT` inventario.
+
+### Decisiones de implementación destacadas
+
+| Decisión | Justificación |
+|----------|---------------|
+| Dependencia `get_db` como generador con `yield` | Garantiza `conn.close()` aunque el endpoint lance excepción; permite `dependency_overrides` en tests |
+| `_classify_value_error` heurístico | Mapea `ValueError` del servicio a 404 o 409 sin acoplar el servicio a códigos HTTP |
+| `GET /disponibilidad` valida con `DisponibilidadConsulta` | Misma lógica de validación que `POST /reservas` (Adaptación 1) |
+| `init_db()` llamado al importar `app.main` | La BD y el inventario se garantizan al arrancar; idempotente (no duplica unidades) |
+| Confirmación `SI` literal en `reset_db.py` | Evita ejecuciones accidentales; coherente con la regla de "confirmación humana explícita" de `rules.md` |
 
 ---
 

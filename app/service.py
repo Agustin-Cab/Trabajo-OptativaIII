@@ -305,3 +305,4 @@ def listar_reservas(
 
     cur = conn.execute(sql, params)
     return [_row_to_reserva(fila) for fila in cur.fetchall()]
+

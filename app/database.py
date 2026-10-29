@@ -98,3 +98,4 @@ def init_db(db_path: str = _DEFAULT_DB) -> None:
             _UNIDADES_INICIALES,
         )
     conn.close()
+
