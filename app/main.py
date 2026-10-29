@@ -295,3 +295,4 @@ def cancelar_reserva(reserva_id: int, conn: DBDep) -> ReservaRespuesta:
         return service.cancelar_reserva(conn, reserva_id)
     except ValueError as exc:
         raise _classify_value_error(exc) from exc
+

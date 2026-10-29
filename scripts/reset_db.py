@@ -178,3 +178,4 @@ if __name__ == "__main__":
         db_path=args.db_path,
         confirmar=not args.sin_confirmacion,
     )
+

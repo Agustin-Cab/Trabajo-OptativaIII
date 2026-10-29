@@ -32,8 +32,49 @@
 
 | Fase | Descripción |
 |------|-------------|
-| Fase 3 | Implementación de `tests/test_reservas.py` con casos de prueba |
 | Fase 4 | Integración final y validación completa |
+
+---
+
+## Episodio de Delegación 3 — Suite de pruebas automatizadas (`tests/test_reservas.py`)
+
+**Estado:** ✅ Completado  
+**Fecha:** 2026-10-29  
+**Resultado:** `34 passed` en `pytest -v` — sin fallos
+
+### Entorno de ejecución resuelto
+
+El entorno (Python 3.14.4, sin pip global) requirió las siguientes adaptaciones:
+
+1. Creación de entorno virtual `.venv/` con `python3 -m venv`.
+2. Instalación de `pip` vía `curl https://bootstrap.pypa.io/get-pip.py`.
+3. Pydantic v2 no compila en Python 3.14 (falta toolchain Rust) → se instaló **Pydantic v1 (1.10.26)** + **FastAPI 0.99.1**.
+4. `httpx 0.28.1` es incompatible con `starlette 0.27.0` (parámetro `app` removido de `httpx.Client`) → se fijó **httpx 0.23.3**.
+5. `app/models.py` fue reescrito de API v2 a **API v1** (`@validator`, `class Config` con `orm_mode`).
+6. `requirements.txt` actualizado con las versiones reales instaladas y verificadas.
+
+### Tests implementados (34 en total)
+
+| Grupo | Nº tests | Escenarios cubiertos |
+|-------|:---:|---|
+| Inventario | 2 | 5 unidades presentes, campos id+descripcion |
+| Creación válida | 2 | 201 + campos completos, IDs autoincrementales |
+| Superposición | 4 | Exacta, parcial inicio, parcial fin, contenida → 409 |
+| Límites consecutivos | 3 | Después, antes, tres franjas consecutivas → 201 |
+| Unidades distintas | 2 | Misma franja dos unidades, 5 unidades simultáneas |
+| Entradas inválidas | 6 | Unidad 99→404, solicitante vacío→422, solo espacios→422, formato fecha→422, fecha sin hora→422, inicio=fin→422, inicio>fin→422 |
+| Cancelación | 6 | Cambia estado, conserva ID+datos, aparece en historial, libera intervalo, ID inexistente→404, doble cancelación→409 |
+| Disponibilidad | 7 | Libre, con activa, consecutivo, tras cancelar, unidad inexistente→404, inicio=fin→422, coherencia con creación |
+| Persistencia en disco | 1 | Dos instancias de app sobre el mismo `.db`, reserva activa + cancelada recuperadas íntegras |
+
+### Decisiones de implementación
+
+| Decisión | Justificación |
+|----------|---------------|
+| `tmp_path` de pytest por test | Aislamiento garantizado; pytest limpia automáticamente |
+| `app.dependency_overrides[get_db]` | Inyecta BD de test sin modificar código de producción |
+| `_make_client(db_path)` helper compartido | Evita duplicación entre fixture y test de persistencia |
+| `pop(get_db, None)` al finalizar | Evita contaminación entre tests que comparten el objeto `app` singleton |
 
 ---
 

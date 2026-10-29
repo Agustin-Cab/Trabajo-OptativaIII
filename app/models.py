@@ -1,7 +1,7 @@
 """
 app/models.py
 -------------
-Esquemas Pydantic v2 para validación de entradas y serialización de salidas.
+Esquemas Pydantic v1 para validación de entradas y serialización de salidas.
 
 Validaciones de dominio aplicadas en este módulo:
   - ``solicitante``: no vacío ni compuesto solo por espacios (se aplica strip).
@@ -15,7 +15,7 @@ superposición de reservas) se validan en ``app/service.py``.
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, validator
 
 # Formato ISO 8601 aceptado por el sistema (resolución de minuto)
 _FMT = "%Y-%m-%dT%H:%M"
@@ -43,10 +43,11 @@ def _parse_dt(value: str) -> datetime:
 class Unidad(BaseModel):
     """Representa una unidad de equipamiento del inventario."""
 
-    id: str = Field(..., examples=["MIC-01"])
-    descripcion: str = Field(..., examples=["Microscopio digital"])
+    id: str = Field(..., example="MIC-01")
+    descripcion: str = Field(..., example="Microscopio digital")
 
-    model_config = {"from_attributes": True}
+    class Config:
+        orm_mode = True
 
 
 # ---------------------------------------------------------------------------
@@ -63,16 +64,16 @@ class ReservaCrear(BaseModel):
     - ``inicio < fin`` (duración mínima 1 minuto).
     """
 
-    id_unidad: str = Field(..., examples=["MIC-01"])
-    solicitante: str = Field(..., examples=["Ana García"])
-    inicio: str = Field(..., examples=["2025-06-15T10:00"])
-    fin: str = Field(..., examples=["2025-06-15T11:00"])
+    id_unidad: str = Field(..., example="MIC-01")
+    solicitante: str = Field(..., example="Ana García")
+    inicio: str = Field(..., example="2025-06-15T10:00")
+    fin: str = Field(..., example="2025-06-15T11:00")
 
     # -----------------------------------------------------------------------
-    # Validadores de campo individuales
+    # Validadores individuales (Pydantic v1)
     # -----------------------------------------------------------------------
 
-    @field_validator("solicitante", mode="before")
+    @validator("solicitante", pre=True, always=True)
     @classmethod
     def solicitante_no_vacio(cls, v: str) -> str:
         """Rechaza solicitantes vacíos o compuestos solo por espacios."""
@@ -83,7 +84,7 @@ class ReservaCrear(BaseModel):
             )
         return v.strip()
 
-    @field_validator("inicio", "fin", mode="before")
+    @validator("inicio", "fin", pre=True, always=True)
     @classmethod
     def fecha_formato_valido(cls, v: str) -> str:
         """Verifica que la cadena sea parseable como ISO 8601 YYYY-MM-DDTHH:MM."""
@@ -91,22 +92,31 @@ class ReservaCrear(BaseModel):
         return v
 
     # -----------------------------------------------------------------------
-    # Validador cruzado: inicio < fin
+    # Validador cruzado: inicio < fin  (Pydantic v1: each_item=False, always)
     # -----------------------------------------------------------------------
 
-    @model_validator(mode="after")
-    def inicio_estrictamente_anterior_a_fin(self) -> "ReservaCrear":
+    @validator("fin", always=True)
+    @classmethod
+    def inicio_estrictamente_anterior_a_fin(cls, fin_val: str, values: dict) -> str:
         """Garantiza que ``inicio`` sea estrictamente anterior a ``fin``."""
-        dt_inicio = _parse_dt(self.inicio)
-        dt_fin = _parse_dt(self.fin)
+        inicio_val = values.get("inicio")
+        if inicio_val is None:
+            # inicio falló su propia validación; no podemos comparar
+            return fin_val
+        try:
+            dt_inicio = _parse_dt(inicio_val)
+            dt_fin = _parse_dt(fin_val)
+        except ValueError:
+            return fin_val  # ya fue reportado por fecha_formato_valido
         if dt_inicio >= dt_fin:
             raise ValueError(
-                f"'inicio' ({self.inicio}) debe ser estrictamente anterior a "
-                f"'fin' ({self.fin}). La duración mínima es 1 minuto."
+                f"'inicio' ({inicio_val}) debe ser estrictamente anterior a "
+                f"'fin' ({fin_val}). La duración mínima es 1 minuto."
             )
-        return self
+        return fin_val
 
-    model_config = {"from_attributes": True}
+    class Config:
+        orm_mode = True
 
 
 # ---------------------------------------------------------------------------
@@ -123,7 +133,8 @@ class ReservaRespuesta(BaseModel):
     fin: str
     estado: Literal["ACTIVA", "CANCELADA"]
 
-    model_config = {"from_attributes": True}
+    class Config:
+        orm_mode = True
 
 
 # ---------------------------------------------------------------------------
@@ -138,26 +149,33 @@ class DisponibilidadConsulta(BaseModel):
     y en creación).
     """
 
-    id_unidad: str = Field(..., examples=["MIC-01"])
-    inicio: str = Field(..., examples=["2025-06-15T10:00"])
-    fin: str = Field(..., examples=["2025-06-15T11:00"])
+    id_unidad: str = Field(..., example="MIC-01")
+    inicio: str = Field(..., example="2025-06-15T10:00")
+    fin: str = Field(..., example="2025-06-15T11:00")
 
-    @field_validator("inicio", "fin", mode="before")
+    @validator("inicio", "fin", pre=True, always=True)
     @classmethod
     def fecha_formato_valido(cls, v: str) -> str:
         _parse_dt(v)
         return v
 
-    @model_validator(mode="after")
-    def inicio_estrictamente_anterior_a_fin(self) -> "DisponibilidadConsulta":
-        dt_inicio = _parse_dt(self.inicio)
-        dt_fin = _parse_dt(self.fin)
+    @validator("fin", always=True)
+    @classmethod
+    def inicio_estrictamente_anterior_a_fin(cls, fin_val: str, values: dict) -> str:
+        inicio_val = values.get("inicio")
+        if inicio_val is None:
+            return fin_val
+        try:
+            dt_inicio = _parse_dt(inicio_val)
+            dt_fin = _parse_dt(fin_val)
+        except ValueError:
+            return fin_val
         if dt_inicio >= dt_fin:
             raise ValueError(
-                f"'inicio' ({self.inicio}) debe ser estrictamente anterior a "
-                f"'fin' ({self.fin})."
+                f"'inicio' ({inicio_val}) debe ser estrictamente anterior a "
+                f"'fin' ({fin_val})."
             )
-        return self
+        return fin_val
 
-    model_config = {"from_attributes": True}
-
+    class Config:
+        orm_mode = True
