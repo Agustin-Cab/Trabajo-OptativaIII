@@ -515,3 +515,4 @@ def test_persistencia_en_disco(tmp_path: Path) -> None:
     assert reservas[id_cancelada]["fin"] == "2025-10-01T12:00"
 
     app.dependency_overrides.pop(get_db, None)
+

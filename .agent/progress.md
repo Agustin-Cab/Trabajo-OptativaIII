@@ -28,11 +28,17 @@
    el problema, alcance, inventario precargado obligatorio (5 unidades), reglas
    de negocio mínimas y criterios de aceptación verificables.
 
-### Próximas fases planificadas
+### Estado general del proyecto
 
-| Fase | Descripción |
-|------|-------------|
-| Fase 4 | Integración final y validación completa |
+**Todas las fases y episodios han sido completados con éxito.**
+
+| Fase / Episodio | Descripción | Estado |
+|-----------------|-------------|:------:|
+| Fase 0 | Limpieza inicial, `.gitignore`, `.agent/rules.md` y Spec v1.0 | ✅ Completada |
+| Episodio 1 | Evolución de spec a v1.1, persistencia SQLite y lógica de dominio (`service.py`, `models.py`) | ✅ Completado |
+| Episodio 2 | API REST FastAPI (`main.py`) y script de reinicio seguro (`reset_db.py`) | ✅ Completado |
+| Episodio 3 | Suite de pruebas automatizadas (`tests/test_reservas.py` — 34/34 tests) y fijación de dependencias | ✅ Completado |
+| Cierre / Docs | Documentación final estructurada en 4 secciones (`README.md`), hashes reales y validación integral | ✅ Completado |
 
 ---
 

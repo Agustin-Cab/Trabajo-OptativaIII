@@ -78,10 +78,12 @@ def reset_db(db_path: str, *, confirmar: bool = True) -> None:
         conn.execute("DROP TABLE IF EXISTS reservas;")
         conn.execute("DROP TABLE IF EXISTS unidades;")
 
-        # Reiniciar el contador AUTOINCREMENT de reservas
-        conn.execute(
-            "DELETE FROM sqlite_sequence WHERE name = 'reservas';"
-        )
+        # Reiniciar el contador AUTOINCREMENT de reservas si sqlite_sequence existe
+        seq_exists = conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'sqlite_sequence';"
+        ).fetchone()
+        if seq_exists:
+            conn.execute("DELETE FROM sqlite_sequence WHERE name = 'reservas';")
 
         # ------------------------------------------------------------------
         # 2. Recrear tabla de unidades
